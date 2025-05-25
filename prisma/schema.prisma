@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // or your database provider (e.g., sqlite, mysql)
+  url      = env("DATABASE_URL")
+}
+
+model Suggestion {
+  id          String   @id @default(uuid())
+  tmdbId      Int
+  type        String 
+  title       String
+  overview    String?
+  posterPath  String?
+  releaseDate String
+  rating      Float
+  addedAt     String
+  watched     Boolean  @default(false)
+}

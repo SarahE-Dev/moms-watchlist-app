@@ -1,78 +1,51 @@
+import { PrismaClient } from '@prisma/client'
 import { Suggestion } from '../types/suggestion'
 
-// suggestionService.ts
-import db from './db'
+const prisma = new PrismaClient()
 
-export function getSuggestions(): Suggestion[] {
-  const stmt = db.prepare('SELECT * FROM suggestions')
-  const rows = stmt.all()
-  return rows.map((row: any) => ({
-    ...row,
-    watched: Boolean(row.watched),
+export async function getSuggestions(): Promise<Suggestion[]> {
+  const suggestions = await prisma.suggestion.findMany()
+  return suggestions.map((s: Suggestion) => ({
+    ...s,
+    watched: Boolean(s.watched),
   }))
 }
 
-export function saveSuggestions(suggestions: Suggestion[]): void {
-  const deleteStmt = db.prepare('DELETE FROM suggestions')
-  deleteStmt.run()
+export async function saveSuggestions(suggestions: Suggestion[]): Promise<void> {
+  // Clear existing suggestions
+  await prisma.suggestion.deleteMany()
 
-  const insertStmt = db.prepare(`
-    INSERT INTO suggestions (
-      id, tmdbId, type, title, overview, posterPath,
-      releaseDate, rating, addedAt, watched
-    ) VALUES (
-      @id, @tmdbId, @type, @title, @overview, @posterPath,
-      @releaseDate, @rating, @addedAt, @watched
-    )
-  `)
-
-  const insertMany = db.transaction((suggestions: Suggestion[]) => {
-    for (const suggestion of suggestions) {
-      insertStmt.run({
-        ...suggestion,
-        watched: suggestion.watched ? 1 : 0,
-      })
-    }
+  // Bulk insert
+  await prisma.suggestion.createMany({
+    data: suggestions.map((s) => ({
+      ...s,
+      watched: s.watched ?? false,
+    })),
   })
-
-  insertMany(suggestions)
 }
 
-export function addSuggestion(suggestion: Omit<Suggestion, 'id' | 'addedAt' | 'watched'>): void {
-  const newSuggestion: Suggestion = {
-    ...suggestion,
-    id: Date.now().toString(),
-    addedAt: new Date().toISOString(),
-    watched: false,
-  }
-
-  const stmt = db.prepare(`
-    INSERT INTO suggestions (
-      id, tmdbId, type, title, overview, posterPath,
-      releaseDate, rating, addedAt, watched
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `)
-
-  stmt.run(
-    newSuggestion.id,
-    newSuggestion.tmdbId,
-    newSuggestion.type,
-    newSuggestion.title,
-    newSuggestion.overview,
-    newSuggestion.posterPath,
-    newSuggestion.releaseDate,
-    newSuggestion.rating,
-    newSuggestion.addedAt,
-    0
-  )
+export async function addSuggestion(
+  suggestion: Omit<Suggestion, 'id' | 'addedAt' | 'watched'>
+): Promise<void> {
+  await prisma.suggestion.create({
+    data: {
+      ...suggestion,
+      id: Date.now().toString(),
+      addedAt: new Date().toISOString(),
+      watched: false,
+    },
+  })
 }
 
-export function markAsWatched(id: string): void {
-  const stmt = db.prepare('UPDATE suggestions SET watched = 1 WHERE id = ?')
-  stmt.run(id)
+export async function markAsWatched(id: string): Promise<void> {
+  await prisma.suggestion.update({
+    where: { id },
+    data: { watched: true },
+  })
 }
 
-export function removeSuggestion(id: string): void {
-  const stmt = db.prepare('DELETE FROM suggestions WHERE id = ?')
-  stmt.run(id)
+export async function removeSuggestion(id: string): Promise<void> {
+  await prisma.suggestion.delete({
+    where: { id },
+  })
 }
