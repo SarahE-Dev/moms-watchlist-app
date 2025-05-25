@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Eye, Trash2, Star, Calendar } from "lucide-react"
-import type { Suggestion } from "@/lib/storage"
+import { Suggestion } from "@/types/suggestion"
 import { getImageUrl } from "@/lib/tmdb"
 import { PasswordDialog } from "./password-dialog"
 
@@ -58,7 +58,7 @@ export function SuggestionCard({ suggestion, onMarkWatched, onRemove, onViewDeta
             </div>
             <div className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
-              <span>{new Date(suggestion.releaseDate).getFullYear()}</span>
+              <span>{suggestion.releaseDate ? new Date(suggestion.releaseDate).getFullYear() : ""}</span>
             </div>
           </div>
 

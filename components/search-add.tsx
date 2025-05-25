@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { searchMovies, searchTVShows, type Movie, type TVShow, getImageUrl } from "@/lib/tmdb"
-import { addSuggestion } from "@/lib/storage"
 import { PasswordDialog } from "./password-dialog"
 import Image from "next/image"
 import { testTMDBConnection } from "@/lib/api-test" // Import testTMDBConnection
@@ -71,29 +70,48 @@ export function SearchAdd({ onSuggestionAdded }: SearchAddProps) {
     setShowPasswordDialog(true)
   }
 
-  const confirmAddSuggestion = () => {
-    if (!selectedItem) return
+  const confirmAddSuggestion = async () => {
+  if (!selectedItem) return
 
-    const isMovie = searchType === "movie"
-    const movieItem = selectedItem as Movie
-    const tvItem = selectedItem as TVShow
+  const isMovie = searchType === "movie"
+  const item = selectedItem as Movie | TVShow
 
-    addSuggestion({
-      tmdbId: selectedItem.id,
-      type: searchType,
-      title: isMovie ? movieItem.title : tvItem.name,
-      overview: selectedItem.overview,
-      posterPath: selectedItem.poster_path,
-      releaseDate: isMovie ? movieItem.release_date : tvItem.first_air_date,
-      rating: selectedItem.vote_average,
+  try {
+    const res = await fetch("/api/suggestions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tmdbId: item.id,
+        type: isMovie ? "movie" : "tv",
+        title: isMovie ? (item as Movie).title : (item as TVShow).name,
+        overview: item.overview,
+        posterPath: item.poster_path,
+        releaseDate: isMovie ? (item as Movie).release_date : (item as TVShow).first_air_date,
+        rating: item.vote_average,
+        addedAt: new Date().toISOString(),
+        watched: false,
+      }),
     })
 
-    setSelectedItem(null)
-    setShowResults(false)
-    setSearchQuery("")
-    setSearchResults([])
-    onSuggestionAdded()
+    if (!res.ok) {
+      throw new Error(`Failed to add suggestion: ${res.statusText}`)
+    }
+
+    console.log("Suggestion added successfully")
+  } catch (error) {
+    console.error("Error adding suggestion:", error)
   }
+
+  // Reset UI state
+  setSelectedItem(null)
+  setShowResults(false)
+  setSearchQuery("")
+  setSearchResults([])
+  onSuggestionAdded()
+}
+
 
   return (
     <>

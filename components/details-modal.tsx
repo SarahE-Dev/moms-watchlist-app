@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Star, Calendar, Clock, Users } from "lucide-react"
-import type { Suggestion } from "@/lib/storage"
+import type { Suggestion } from "@/lib/suggestionService"
 import { getMovieDetails, getTVShowDetails, getImageUrl, type MovieDetails, type TVShowDetails } from "@/lib/tmdb"
 
 interface DetailsModalProps {

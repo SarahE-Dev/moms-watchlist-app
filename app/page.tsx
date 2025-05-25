@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Film, Tv, Heart, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getSuggestions, markAsWatched, removeSuggestion, type Suggestion } from "@/lib/storage"
+import { Suggestion } from "@/types/suggestion"
 import { SuggestionCard } from "@/components/suggestion-card"
 import { SearchAdd } from "@/components/search-add"
 import { DetailsModal } from "@/components/details-modal"
@@ -14,19 +14,50 @@ export default function HomePage() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setSuggestions(getSuggestions())
+    setMounted(true)
   }, [])
 
-  const handleMarkWatched = (id: string) => {
-    markAsWatched(id)
-    setSuggestions(getSuggestions())
+  useEffect(() => {
+    fetch("/api/suggestions")
+      .then(res => res.json())
+      .then(data => {
+          setSuggestions(data)
+      })
+      .catch(console.error)
+  }, [])
+
+
+  // Mark as watched API call
+  const handleMarkWatched = async (id: string) => {
+    try {
+      const res = await fetch(`/api/suggestions/${id}`, {
+        method: "PATCH",
+      })
+      if (res.ok) {
+        const updatedSuggestions = await res.json()
+        setSuggestions(updatedSuggestions)
+      }
+    } catch (error) {
+      console.error(error)
+    }
   }
 
-  const handleRemove = (id: string) => {
-    removeSuggestion(id)
-    setSuggestions(getSuggestions())
+  // Remove suggestion API call
+  const handleRemove = async (id: string) => {
+    try {
+      const res = await fetch(`/api/suggestions/${id}`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        const updatedSuggestions = await res.json()
+        setSuggestions(updatedSuggestions)
+      }
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   const handleViewDetails = (suggestion: Suggestion) => {
@@ -34,15 +65,36 @@ export default function HomePage() {
     setShowDetails(true)
   }
 
-  const handleSuggestionAdded = () => {
-    setSuggestions(getSuggestions())
-    setShowSearch(false)
+  // Handle after adding suggestion — refetch the list
+  const handleSuggestionAdded = async () => {
+    try {
+      const res = await fetch("/api/suggestions")
+      const data = await res.json()
+      setSuggestions(data)
+      setShowSearch(false)
+    } catch (error) {
+      console.error(error)
+    }
   }
 
-  const unwatchedSuggestions = suggestions.filter((s) => !s.watched)
-  const watchedSuggestions = suggestions.filter((s) => s.watched)
-  const movieSuggestions = unwatchedSuggestions.filter((s) => s.type === "movie")
-  const tvSuggestions = unwatchedSuggestions.filter((s) => s.type === "tv")
+
+const unwatchedSuggestions = mounted && Array.isArray(suggestions)
+  ? suggestions.filter(s => !s.watched)
+  : []
+
+const watchedSuggestions = mounted && Array.isArray(suggestions)
+  ? suggestions.filter(s => s.watched)
+  : []
+
+const movieSuggestions = mounted && Array.isArray(suggestions)
+  ? unwatchedSuggestions.filter(s => s.type === "movie")
+  : []
+
+const tvSuggestions = mounted && Array.isArray(suggestions)
+  ? unwatchedSuggestions.filter(s => s.type === "tv")
+  : []
+
+
 
   return (
     <div className="min-h-screen p-4 md:p-8 pb-16">
